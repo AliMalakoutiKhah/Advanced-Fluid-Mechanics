@@ -1,0 +1,191 @@
+%% Clear
+clear all
+clc
+%% Format
+format long
+%% Defining the Parametres
+a = 0;              %the surface of the wedge
+b = 1;              %the edge of the boundary layer
+n = 200;            %number of the steps
+h = (b-a)/n;        %size of the steps
+eta = a:h:b;        %domain
+Re = 50;
+alpha = 10*(pi/180);
+r = (0.1:0.1:5).^2;
+r2 = 1./r;
+
+% Array of the Solution
+y = zeros(3,n+1);
+t = zeros(2,n+1); 
+% Boundary Conditions
+y(1,1) = 1;         
+y(2,1) = 0;         
+y(3,1) = -5.91089262286065;
+
+t(1,1) = 1;
+t(2,1) = 0;
+%% Solving the Equstions Using Single-Step (RK4) and Multi-Step (Haghi) Methods
+%for the first three points of the domain (excluding the B.C.s)
+
+syms x1(x) x2(x) x3(x)
+
+kk = 1;
+
+while 1
+    
+    
+    % Runge-Kutta Fourth Order (RK4)
+    for ii = 1:1:3  %Only for the First Three Points After the I.C.s
+    
+      k1 = h * [y(2,ii); y(3,ii); -2*Re*alpha*y(1,ii)*y(2,ii) - 4*alpha^2*y(2,ii)];
+      k2 = h * [y(2,ii)+0.5*k1(2,1); y(3,ii)+0.5*k1(3,1); - 2*Re*alpha*(y(1,ii)+0.5*k1(1,1))*(y(2,ii)+0.5*k1(2,1)) - 4*alpha^2*(y(2,ii)+0.5*k1(2,1))]; 
+      k3 = h * [y(2,ii)+0.5*k2(2,1); y(3,ii)+0.5*k2(3,1); - 2*Re*alpha*(y(1,ii)+0.5*k2(1,1))*(y(2,ii)+0.5*k2(2,1)) - 4*alpha^2*(y(2,ii)+0.5*k2(2,1))];
+      k4 = h * [y(2,ii)+    k3(2,1); y(3,ii)+    k3(3,1); - 2*Re*alpha*(y(1,ii)+    k3(1,1))*(y(2,ii)+    k3(2,1)) - 4*alpha^2*(y(2,ii)+    k3(2,1))];
+
+       for jj = 1:3
+        y(jj,ii+1) = y(jj,ii) + (1/6) * (k1(jj,1) + 2 * k2(jj,1) + 2 * k3(jj,1) + k4(jj,1));    %The Next Array
+       end
+
+    end
+    
+    % Haghi Four-Step Formula
+    for ii = 4:1:n
+        
+        h1 = [y(2,ii); y(3,ii); -2*Re*alpha*y(1,ii)*y(2,ii) - 4*alpha^2*y(2,ii)];
+        h2 = [y(2,ii-1); y(3,ii-1); -2*Re*alpha*y(1,ii-1)*y(2,ii-1) - 4*alpha^2*y(2,ii-1)];
+        h3 = [y(2,ii-2); y(3,ii-2); -2*Re*alpha*y(1,ii-2)*y(2,ii-2) - 4*alpha^2*y(2,ii-2)];
+        h4 = [y(2,ii-3); y(3,ii-3); -2*Re*alpha*y(1,ii-3)*y(2,ii-3) - 4*alpha^2*y(2,ii-3)];
+
+        for jj = 1:3
+            y(jj,ii+1) = y(jj,ii) + (h/108) * (175*h1(jj,1) - 81*h2(jj,1) + 15*h3(jj,1) - h4(jj,1));    %The Next Array
+        end
+    end
+    
+    % Applying the Adjoint Equations
+    ode1 = diff(x1(x)) == (2*Re*alpha*y(2,1))*x3;
+    ode2 = diff(x2(x)) == -x1 + (2*Re*alpha*y(1,1) + 4*alpha^2)*x3;
+    ode3 = diff(x3(x)) == -x2;
+    odes = [ode1; ode2; ode3];
+    cond1 = x1(b) == 1;
+    cond2 = x2(b) == 0;
+    cond3 = x3(b) == 0;
+    conds = [cond1; cond2; cond3];
+    [v(x) u(x) w(x)] = dsolve(odes,conds);
+    
+    y(3,1) = y(3,1) + (1/vpa(w(0))) * (0-y(1,n+1)); %The New Guess
+    
+    % Termination of the Loop (Defining the Halt Criteria)
+%     if y(3,n+1) > 0
+        if abs(y(1,n+1) - 0) < 1e-8
+            kk                   %The Number of Iterations 
+            break
+        end
+%     end
+    
+    kk = kk + 1;
+    
+end
+
+
+%% Temperature
+kk = 1;
+
+while 1
+    
+    
+    % Runge-Kutta Fourth Order (RK4)
+    for ii = 1:1:3  %Only for the First Three Points After the I.C.s
+    
+      kk1 = h * [t(2,ii); -4*alpha^2*t(1,ii) - 2*alpha^2*y(1,ii)*t(1,ii)];
+      kk2 = h * [t(2,ii)+0.5*kk1(2,1); -4*alpha^2*(t(1,ii)+0.5*kk1(1,1)) - 2*alpha^2*y(1,ii)*(t(1,ii)+0.5*kk1(1,1))]; 
+      kk3 = h * [t(2,ii)+0.5*kk2(2,1); -4*alpha^2*(t(1,ii)+0.5*kk2(1,1)) - 2*alpha^2*y(1,ii)*(t(1,ii)+0.5*kk2(1,1))];
+      kk4 = h * [t(2,ii)+	 kk3(2,1); -4*alpha^2*(t(1,ii)+	   kk3(1,1)) - 2*alpha^2*y(1,ii)*(t(1,ii)+	  kk3(1,1))];
+
+       for jj = 1:2
+        t(jj,ii+1) = t(jj,ii) + (1/6) * (kk1(jj,1) + 2 * kk2(jj,1) + 2 * kk3(jj,1) + kk4(jj,1));    %The Next Array
+       end
+
+    end
+    
+    % Haghi Four-Step Formula
+    for ii = 4:1:n
+        
+        hh1 = [t(2,ii); -4*alpha^2*t(1,ii) - 2*alpha^2*y(1,ii)*t(1,ii)];
+        hh2 = [t(2,ii-1); -4*alpha^2*t(1,ii-1) - 2*alpha^2*y(1,ii)*t(1,ii-1)];
+        hh3 = [t(2,ii-2); -4*alpha^2*t(1,ii-2) - 2*alpha^2*y(1,ii)*t(1,ii-2)];
+        hh4 = [t(2,ii-3); -4*alpha^2*t(1,ii-3) - 2*alpha^2*y(1,ii)*t(1,ii-3)];
+
+        for jj = 1:2
+            t(jj,ii+1) = t(jj,ii) + (h/108) * (175*hh1(jj,1) - 81*hh2(jj,1) + 15*hh3(jj,1) - hh4(jj,1));    %The Next Array
+        end
+    end
+    
+    % Applying the Adjoint Equations
+    ode1 = diff(x1(x)) == (4*alpha^2+2*alpha^2*y(1,1))*x2;
+    ode2 = diff(x2(x)) == -x1;
+    odes = [ode1; ode2];
+    cond1 = x1(b) == 1;
+    cond2 = x2(b) == 0;
+    conds = [cond1; cond2];
+    [v(x) u(x)] = dsolve(odes,conds);
+    
+    t(1,1) = t(1,1) + (1/vpa(v(0))) * (0-t(1,n+1)); %The New Guess
+    
+    % Termination of the Loop (Defining the Halt Criteria)
+%     if y(3,n+1) > 0
+        if abs(t(1,n+1) - 0) < 1e-8
+            kk                   %The Number of Iterations 
+            break
+        end
+%     end
+    
+    kk = kk + 1;
+    
+end
+
+%% Pressure along the centreline
+P_Pinf = r2 * ((4*alpha^2)/(alpha*Re) * (1-y(1,1)) + (1/(alpha*Re)) * y(3,1));
+
+%% Viscous 
+% Normal Viscous Stress
+tau_rr = r2 * (4*alpha/Re) * y(1,n+1);
+% Shear Viscous Stress
+tau_rtheta = r2 * (2/Re) * y(2,n+1);
+
+%% Temperature
+plot(eta,t(1,:));
+title('Velocity profiles for various Reynolds numbers for flow in a wedge with ? = 10?');
+xlabel('\eta');
+ylabel('Velocity (F(\eta))');
+legend('Re = 50');
+
+%% Velocity
+plot(eta,y(1,:));
+title('Velocity profiles for various Reynolds numbers for flow in a wedge with ? = 10?');
+xlabel('\eta');
+ylabel('Velocity (F(\eta))');
+legend('Re = 50');
+
+
+%% Pressure
+figure(2)
+plot(0.1:0.1:5,P_Pinf);
+title('Pressure Along the Centreline');
+xlabel('\eta');
+ylabel('P-P_(infinity)');
+legend('Re = 50');
+
+%% Friction
+figure(3)
+plot(0.1:0.1:5,tau_rr);
+title('Normal Viscous Stress on the Wall');
+xlabel('r (\eta=\alpha)');
+ylabel('\tau_r_r');
+legend('Re = 50');
+
+figure(4)
+plot(0.1:0.1:5,tau_rr,0.1:0.1:5,tau_rtheta);
+title('Shear Viscous Stress on the Wall');
+xlabel('r (\eta=\alpha)');
+ylabel('\tau_r_\theta');
+legend('Re = 50');
