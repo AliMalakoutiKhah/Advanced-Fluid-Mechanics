@@ -1,0 +1,110 @@
+%% Clear
+clear all
+clc
+%% Format
+format long
+%% Defining the Parametres
+a = 0;              %the surface of the wedge
+b = 7;              %the edge of the boundary layer
+n = 1000;           %number of the steps
+h = (b-a)/n;        %size of the steps
+tau = a:h:b;        %domain
+co = 1.05;             
+% Array of the Solution
+y = zeros(3,n+1);   %y = [y1 (streamlines); y2 (dimensionless velocity); y3 (friction coefficient)]
+% Boundary Conditions
+y(1,1) = 0;         %no streamlines on the surface of the wedge
+y(2,1) = 1;         %zero velocity on the surface of the wedge
+y(3,1) = 2;         %non-zero skin friction on the surface of the wedge
+
+%% Solving the Equations Using Single-Step (RK4) and Multi-Step (Haghi) Methods
+%for the first three points of the domain (excluding the B.C.s)
+
+syms x1(x) x2(x) x3(x)
+
+kk = 1;
+
+while 1
+    
+    
+    % Runge-Kutta Fourth Order (RK4)
+    for ii = 1:1:3  %Only for the First Three Points After the I.C.s
+    
+      k1 = h * [y(2,ii); y(3,ii); -co*y(1,ii)*y(3,ii)];
+      k2 = h * [y(2,ii)+0.5*k1(2,1); y(3,ii)+0.5*k1(3,1); -co*((y(1,ii)+0.5*k1(1,1))*(y(3,ii)+0.5*k1(3,1)))]; 
+      k3 = h * [y(2,ii)+0.5*k2(2,1); y(3,ii)+0.5*k2(3,1); -co*((y(1,ii)+0.5*k2(1,1))*(y(3,ii)+0.5*k2(3,1)))];
+      k4 = h * [y(2,ii)+    k3(2,1); y(3,ii)+    k3(3,1); -co*((y(1,ii)+    k3(1,1))*(y(3,ii)+	  k3(3,1)))];
+
+       for jj = 1:3
+        y(jj,ii+1) = y(jj,ii) + (1/6) * (k1(jj,1) + 2 * k2(jj,1) + 2 * k3(jj,1) + k4(jj,1));    %The Next Array
+       end
+
+    end
+    
+    % Haghi Four-Step Formula
+    for ii = 4:1:n
+        
+        h1 = [y(2,ii); y(3,ii); -co*y(1,ii)*y(3,ii)];
+        h2 = [y(2,ii-1); y(3,ii-1); -co*y(1,ii-1)*y(3,ii-1)];
+        h3 = [y(2,ii-2); y(3,ii-2); -co*y(1,ii-2)*y(3,ii-2)];
+        h4 = [y(2,ii-3); y(3,ii-3); -co*y(1,ii-3)*y(3,ii-3)];
+
+        for jj = 1:3
+            y(jj,ii+1) = y(jj,ii) + (h/108) * (175*h1(jj,1) - 81*h2(jj,1) + 15*h3(jj,1) - h4(jj,1));    %The Next Array
+        end
+    end
+    
+    % Applying the Adjoint Equations
+    ode1 = diff(x1(x)) == co*y(3,1)*x3;
+    ode2 = diff(x2(x)) == -x1;
+    ode3 = diff(x3(x)) == -x2+co*y(1,1)*x3;
+    odes = [ode1; ode2; ode3];
+    cond1 = x1(b) == 0;
+    cond2 = x2(b) == 1;
+    cond3 = x3(b) == 0;
+    conds = [cond1; cond2; cond3];
+    [v(x) u(x) w(x)] = dsolve(odes,conds);
+    
+    y(3,1) = (1/vpa(w(0))) * (0-y(2,n+1)) + y(3,1); %The New Guess
+    
+    % Termination of the Loop (Defining the Halt Criteria)
+    %if y(3,n+1) > 0
+        if abs((y(2,n+1) - 0)) < 1e-8
+            kk                   %The Number of Iterations 
+            break
+        end
+    %end
+    
+    kk = kk + 1;
+    
+end
+
+
+%% Plotting
+
+% Stream Function (\Psi)
+plot(tau,y(1,:));
+title('Streamlines');
+xlabel('\tau');
+ylabel('Stream Function (\Psi)');
+
+% Dimensionless Velocity
+figure(2)
+plot(y(2,:),tau);
+title('Dimensionless Velocity');
+xlabel('u/U_w');
+ylabel('\tau');
+
+% Friction Coefficient
+figure(3)
+plot(tau,y(3,:));
+title('Friction Coefficient');
+xlabel('\tau');
+ylabel('Friction');
+
+%% VON KARMAN–POHLHAUSEN APPROXIMATE METHOD
+eta=0:0.01:1;
+f = 1-3*eta+3*eta.^2-eta.^3;
+plot(eta,f)
+xlabel('\eta')
+ylabel('f = 1-3\eta+3\eta^2-\eta^3')
