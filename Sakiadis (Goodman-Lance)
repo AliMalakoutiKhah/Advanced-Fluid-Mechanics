@@ -9,7 +9,7 @@ b = 7;              %the edge of the boundary layer
 n = 1000;           %number of the steps
 h = (b-a)/n;        %size of the steps
 tau = a:h:b;        %domain
-co = 1.05;             
+co = 2;             
 % Array of the Solution
 y = zeros(3,n+1);   %y = [y1 (streamlines); y2 (dimensionless velocity); y3 (friction coefficient)]
 % Boundary Conditions
@@ -82,24 +82,24 @@ end
 
 %% Plotting
 
-% Stream Function (\Psi)
+% Streamlines
 plot(tau,y(1,:));
 title('Streamlines');
-xlabel('\tau');
+xlabel('\eta');
 ylabel('Stream Function (\Psi)');
 
-% Dimensionless Velocity
+% Velocity
 figure(2)
 plot(y(2,:),tau);
 title('Dimensionless Velocity');
-xlabel('u/U_w');
-ylabel('\tau');
+xlabel('u/U');
+ylabel('\eta');
 
-% Friction Coefficient
+% Friction
 figure(3)
 plot(tau,y(3,:));
-title('Friction Coefficient');
-xlabel('\tau');
+title('Friction');
+xlabel('\eta');
 ylabel('Friction');
 
 %% VON KARMAN–POHLHAUSEN APPROXIMATE METHOD
@@ -108,3 +108,25 @@ f = 1-3*eta+3*eta.^2-eta.^3;
 plot(eta,f)
 xlabel('\eta')
 ylabel('f = 1-3\eta+3\eta^2-\eta^3')
+%% Displacement Thickness
+nu = 0.001;
+x=0:0.001:1;
+deltastar=3/4*(sqrt(nu))*sqrt(x(:));
+plot(x,deltastar)
+xlabel('x')
+ylabel('\delta^*')
+%% Shear Stress on the Flat Plate
+x=0.001:0.001:1;
+tau_w=(10./sqrt(x(:)))*y(3,1);
+plot(x,tau_w)
+xlabel('x')
+ylabel('\tau_w')
+title("Shear Stress on the Flat Plate")
+%% Vertical Velocity Component
+for ii = 1:n
+      v(1,ii)=0.1*(y(1,ii)-tau(ii)*y(2,ii));
+end
+plot(tau,v(1,:))
+xlabel('\eta')
+ylabel('v')
+title("Vertical Velocity Component")
